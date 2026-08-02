@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML/CSS 単語帳</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="app-header">
+  <h1>🎴 HTML/CSS 単語帳</h1>
+  <p class="subtitle">タグをめくって覚えて、クイズで思い出す練習をしよう</p>
+</header>
+
+<div class="section-tabs" id="sectionTabs">
+  <button class="section-tab active" data-section="html">HTML</button>
+  <button class="section-tab" data-section="css">CSS</button>
+</div>
+
+<div class="mode-tabs" id="modeTabs">
+  <button class="mode-tab active" data-mode="flash">📖 フラッシュカード</button>
+  <button class="mode-tab" data-mode="quiz">🎯 クイズ</button>
+</div>
+
+<!-- フラッシュカードモード -->
+<section id="flashView">
+  <div class="toolbar">
+    <input type="search" id="search" placeholder="タグ名で検索...">
+    <div class="filters" id="filters"></div>
+  </div>
+
+  <div class="progress-bar-wrap">
+    <div class="progress-bar" id="progressBar"></div>
+    <span class="progress-label" id="progressLabel">0 / 0 覚えた</span>
+  </div>
+
+  <main class="card-grid" id="cardGrid"></main>
+</section>
+
+<!-- クイズモード -->
+<section id="quizView" class="hidden">
+  <div class="quiz-wrap">
+    <div class="quiz-stats">
+      <span id="quizProgress">問題 1 / 10</span>
+      <span id="quizScore">正解 0</span>
+    </div>
+    <div class="quiz-card">
+      <p class="quiz-label">この用途・意味を表すタグ/プロパティは?</p>
+      <p class="quiz-question" id="quizQuestion"></p>
+      <div class="quiz-options" id="quizOptions"></div>
+      <p class="quiz-feedback" id="quizFeedback"></p>
+      <button class="quiz-next-btn hidden" id="quizNextBtn">次の問題 →</button>
+    </div>
+    <div class="quiz-result hidden" id="quizResult">
+      <p id="quizResultText"></p>
+      <button class="quiz-next-btn" id="quizRestartBtn">もう一度挑戦する</button>
+    </div>
+  </div>
+</section>
+
+<template id="cardTemplate">
+  <div class="flashcard">
+    <div class="flashcard-inner">
+      <div class="face face-front">
+        <span class="category-badge"></span>
+        <div class="tag-name"></div>
+        <p class="hint">クリックでめくる</p>
+      </div>
+      <div class="face face-back">
+        <div class="meaning"></div>
+        <pre class="usage"><code></code></pre>
+        <p class="note"></p>
+        <button class="learned-btn" type="button">覚えた ✓</button>
+      </div>
+    </div>
+  </div>
+</template>
+
+<script src="data.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
