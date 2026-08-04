@@ -41,20 +41,32 @@
   <main class="card-grid" id="cardGrid"></main>
 </section>
 
-<!-- クイズモード -->
+<!-- クイズモード(1文字ずつ4択で組み立てる方式) -->
 <section id="quizView" class="hidden">
   <div class="quiz-wrap">
     <div class="quiz-stats">
       <span id="quizProgress">問題 1 / 10</span>
-      <span id="quizScore">正解 0</span>
+      <span id="quizScoreLabel">ノーミス正解 0</span>
     </div>
+
     <div class="quiz-card">
-      <p class="quiz-label">この用途・意味を表すタグ/プロパティは?</p>
-      <p class="quiz-question" id="quizQuestion"></p>
-      <div class="quiz-options" id="quizOptions"></div>
-      <p class="quiz-feedback" id="quizFeedback"></p>
-      <button class="quiz-next-btn hidden" id="quizNextBtn">次の問題 →</button>
+      <div id="quizLive">
+        <p class="quiz-label">この説明にあてはまるタグ/プロパティ(と主要な属性)は?</p>
+        <p class="quiz-question" id="quizQuestion"></p>
+        <div class="quiz-blanks" id="quizBlanks"></div>
+        <div class="quiz-options" id="quizOptions"></div>
+        <p class="quiz-feedback" id="quizFeedback"></p>
+      </div>
+
+      <div class="quiz-done hidden" id="quizDone">
+        <div class="quiz-done-mark">🎉</div>
+        <p class="quiz-done-sub">正解</p>
+        <pre class="quiz-done-code"><code id="quizDoneCode"></code></pre>
+        <p class="quiz-done-sub" id="quizDoneStatus"></p>
+        <button class="quiz-next-btn" id="quizNextBtn">次の問題 →</button>
+      </div>
     </div>
+
     <div class="quiz-result hidden" id="quizResult">
       <p id="quizResultText"></p>
       <button class="quiz-next-btn" id="quizRestartBtn">もう一度挑戦する</button>

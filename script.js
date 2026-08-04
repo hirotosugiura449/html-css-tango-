@@ -140,18 +140,27 @@ searchEl.addEventListener("input", (e) => {
   renderCards();
 });
 
-// --- クイズモード(意味→タグ 4択) ---
+// --- クイズモード(意味→解答を1文字ずつ4択で組み立てる方式) ---
 const QUIZ_LENGTH = 10;
 let quizQueue = [];
 let quizIndex = 0;
-let quizScore = 0;
-let quizAnswered = false;
+let quizScore = 0; // ノーミスで完答した問題数
+let quizCharPool = [];
+let quizAnswerChars = [];
+let quizPosition = 0;
+let quizMistakeInWord = false;
+let quizLocked = false;
 
 const quizProgressEl = document.getElementById("quizProgress");
-const quizScoreEl = document.getElementById("quizScore");
+const quizScoreLabelEl = document.getElementById("quizScoreLabel");
 const quizQuestionEl = document.getElementById("quizQuestion");
+const quizBlanksEl = document.getElementById("quizBlanks");
 const quizOptionsEl = document.getElementById("quizOptions");
 const quizFeedbackEl = document.getElementById("quizFeedback");
+const quizLiveEl = document.getElementById("quizLive");
+const quizDoneEl = document.getElementById("quizDone");
+const quizDoneCodeEl = document.getElementById("quizDoneCode");
+const quizDoneStatusEl = document.getElementById("quizDoneStatus");
 const quizNextBtn = document.getElementById("quizNextBtn");
 const quizCardEl = document.querySelector(".quiz-card");
 const quizResultEl = document.getElementById("quizResult");
@@ -167,8 +176,31 @@ function shuffle(arr) {
   return a;
 }
 
+function getAnswerWords(card) {
+  return card.answer || [card.tag];
+}
+
+function buildAnswerChars(words) {
+  const chars = [];
+  words.forEach((word, wi) => {
+    [...word].forEach((ch, ci) => {
+      chars.push({ char: ch, wordStart: ci === 0 && wi > 0 });
+    });
+  });
+  return chars;
+}
+
+function sectionCharPool(section) {
+  const set = new Set();
+  SECTIONS[section].cards.forEach(c => {
+    getAnswerWords(c).join("").split("").forEach(ch => set.add(ch));
+  });
+  return [...set];
+}
+
 function startQuiz() {
   const cards = currentCards();
+  quizCharPool = sectionCharPool(currentSection);
   const n = Math.min(QUIZ_LENGTH, cards.length);
   quizQueue = shuffle(cards).slice(0, n);
   quizIndex = 0;
@@ -179,51 +211,101 @@ function startQuiz() {
 }
 
 function renderQuizQuestion() {
-  quizAnswered = false;
-  const cards = currentCards();
   const card = quizQueue[quizIndex];
+  quizAnswerChars = buildAnswerChars(getAnswerWords(card));
+  quizPosition = 0;
+  quizMistakeInWord = false;
+  quizLocked = false;
+
+  quizLiveEl.classList.remove("hidden");
+  quizDoneEl.classList.add("hidden");
 
   quizProgressEl.textContent = `問題 ${quizIndex + 1} / ${quizQueue.length}`;
-  quizScoreEl.textContent = `正解 ${quizScore}`;
+  quizScoreLabelEl.textContent = `ノーミス正解 ${quizScore}`;
   quizQuestionEl.textContent = card.meaning;
+
+  renderQuizBlanks();
+  renderQuizOptions();
+}
+
+function renderQuizBlanks() {
+  quizBlanksEl.innerHTML = "";
+  quizAnswerChars.forEach((item, i) => {
+    const b = document.createElement("div");
+    b.className = "quiz-blank" + (item.wordStart ? " word-start" : "");
+    if (i < quizPosition) {
+      b.classList.add("filled");
+      b.textContent = item.char;
+    } else if (i === quizPosition) {
+      b.classList.add("current");
+    }
+    quizBlanksEl.appendChild(b);
+  });
+}
+
+function renderQuizOptions() {
   quizFeedbackEl.textContent = "";
   quizFeedbackEl.className = "quiz-feedback";
-  quizNextBtn.classList.add("hidden");
-
-  const distractors = shuffle(cards.filter(c => c.id !== card.id)).slice(0, 3);
-  const options = shuffle([card, ...distractors]);
+  const correctChar = quizAnswerChars[quizPosition].char;
+  const decoys = shuffle(quizCharPool.filter(c => c !== correctChar)).slice(0, 3);
+  const choices = shuffle([correctChar, ...decoys]);
 
   quizOptionsEl.innerHTML = "";
-  options.forEach(opt => {
+  choices.forEach(ch => {
     const btn = document.createElement("button");
     btn.className = "quiz-option";
-    btn.textContent = opt.tag;
-    btn.addEventListener("click", () => handleQuizAnswer(btn, opt, card));
+    btn.textContent = ch;
+    btn.addEventListener("click", () => handleQuizChoice(btn, ch, correctChar));
     quizOptionsEl.appendChild(btn);
   });
 }
 
-function handleQuizAnswer(btn, opt, correctCard) {
-  if (quizAnswered) return;
-  quizAnswered = true;
-
-  const isCorrect = opt.id === correctCard.id;
-  if (isCorrect) {
-    quizScore++;
-    btn.classList.add("correct");
-    quizFeedbackEl.textContent = "正解! 🎉";
-    quizFeedbackEl.className = "quiz-feedback correct";
-  } else {
-    btn.classList.add("wrong");
-    quizFeedbackEl.textContent = `不正解... 正解は「${correctCard.tag}」`;
-    quizFeedbackEl.className = "quiz-feedback wrong";
-    [...quizOptionsEl.children].forEach(b => {
-      if (b.textContent === correctCard.tag) b.classList.add("correct");
-    });
-  }
+function handleQuizChoice(btn, chosen, correctChar) {
+  if (quizLocked) return;
+  quizLocked = true;
   [...quizOptionsEl.children].forEach(b => (b.disabled = true));
-  quizScoreEl.textContent = `正解 ${quizScore}`;
-  quizNextBtn.classList.remove("hidden");
+
+  if (chosen === correctChar) {
+    btn.classList.add("correct");
+    quizFeedbackEl.textContent = "正解! この調子で";
+    quizFeedbackEl.className = "quiz-feedback correct";
+    setTimeout(() => {
+      quizPosition++;
+      renderQuizBlanks();
+      const filledBlank = quizBlanksEl.children[quizPosition - 1];
+      if (filledBlank) filledBlank.classList.add("pop");
+      if (quizPosition >= quizAnswerChars.length) {
+        finishQuizWord();
+      } else {
+        quizLocked = false;
+        renderQuizOptions();
+      }
+    }, 380);
+  } else {
+    quizMistakeInWord = true;
+    btn.classList.add("wrong");
+    quizFeedbackEl.textContent = "違います、もう一度";
+    quizFeedbackEl.className = "quiz-feedback wrong";
+    setTimeout(() => {
+      [...quizOptionsEl.children].forEach(b => {
+        b.disabled = false;
+        b.classList.remove("wrong");
+      });
+      quizFeedbackEl.textContent = "";
+      quizLocked = false;
+    }, 550);
+  }
+}
+
+function finishQuizWord() {
+  const card = quizQueue[quizIndex];
+  if (!quizMistakeInWord) quizScore++;
+
+  quizLiveEl.classList.add("hidden");
+  quizDoneEl.classList.remove("hidden");
+  quizDoneCodeEl.textContent = card.usage;
+  quizDoneStatusEl.textContent = quizMistakeInWord ? "完答(ミスあり)" : "ノーミスで完答! 🎉";
+  quizScoreLabelEl.textContent = `ノーミス正解 ${quizScore}`;
 }
 
 quizNextBtn.addEventListener("click", () => {
@@ -231,7 +313,7 @@ quizNextBtn.addEventListener("click", () => {
   if (quizIndex >= quizQueue.length) {
     quizCardEl.classList.add("hidden");
     quizResultEl.classList.remove("hidden");
-    quizResultTextEl.textContent = `結果: ${quizQueue.length}問中 ${quizScore}問正解!`;
+    quizResultTextEl.textContent = `結果: ${quizQueue.length}問中 ${quizScore}問ノーミス正解!`;
   } else {
     renderQuizQuestion();
   }
